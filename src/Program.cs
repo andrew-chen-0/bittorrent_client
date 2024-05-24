@@ -1,3 +1,5 @@
+#nullable enable
+using codecrafters_bittorrent.src;
 using System.Text.Json;
 
 // Parse arguments
@@ -18,18 +20,12 @@ if (command == "decode")
     var encodedValue = param;
     if (Char.IsDigit(encodedValue[0]))
     {
-        // Example: "5:hello" -> "hello"
-        var colonIndex = encodedValue.IndexOf(':');
-        if (colonIndex != -1)
-        {
-            var strLength = int.Parse(encodedValue[..colonIndex]);
-            var strValue = encodedValue.Substring(colonIndex + 1, strLength);
-            Console.WriteLine(JsonSerializer.Serialize(strValue));
-        }
-        else
-        {
-            throw new InvalidOperationException("Invalid encoded value: " + encodedValue);
-        }
+        Bencode.DecodeString(encodedValue);
+    }
+    else if (encodedValue[0] == 'i')
+    {
+        var int_value = Bencode.DecodeInt(encodedValue);
+        Console.WriteLine(JsonSerializer.Serialize(int_value));
     }
     else
     {
