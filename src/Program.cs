@@ -1,5 +1,7 @@
 #nullable enable
 using codecrafters_bittorrent.src;
+using System.Collections.Generic;
+using System.Numerics;
 using System.Text.Json;
 
 // Parse arguments
@@ -13,20 +15,26 @@ var (command, param) = args.Length switch
 // Parse command and act accordingly
 if (command == "decode")
 {
-    // You can use print statements as follows for debugging, they'll be visible when running tests.
-    //Console.WriteLine("Logs from your program will appear here!");
 
-    // Uncomment this line to pass the first stage
-    var encodedValue = param;
-    if (Char.IsDigit(encodedValue[0]))
+    if (param == null)
     {
-        var str_value = Bencode.DecodeString(encodedValue);
+        throw new InvalidOperationException("Provide encoded value");
+    }
+    var encodedValue = new BencodeEncodedString(param);
+
+    var decoded_value = Bencode.Decode(encodedValue);
+
+    if (decoded_value is string str_value)
+    {
         Console.WriteLine(JsonSerializer.Serialize(str_value));
     }
-    else if (encodedValue[0] == 'i')
+    else if (decoded_value is BigInteger int_value)
     {
-        var int_value = Bencode.DecodeBigInteger(encodedValue);
         Console.WriteLine(int_value);
+    }
+    else if (decoded_value is List<object> list_value)
+    {
+        Console.WriteLine(JsonSerializer.Serialize(list_value));
     }
     else
     {
