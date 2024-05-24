@@ -132,7 +132,7 @@ namespace codecrafters_bittorrent.src
 
         public string GetNextNChars(int n)
         {
-            CheckBounds(idx + n);
+            CheckBounds(idx + n - 1);
             var sub_string = encodedString.Substring(idx, n);
             idx += n;
             return sub_string;
