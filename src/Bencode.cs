@@ -89,7 +89,7 @@ namespace codecrafters_bittorrent.src
             return results_list;
         }
 
-        private static BigInteger ParseInteger(BencodeEncodedString encodedValue)
+        private static long ParseInteger(BencodeEncodedString encodedValue)
         {
             int idx = 0;
             char[] char_str_length = new char[encodedValue.Length];
@@ -98,7 +98,7 @@ namespace codecrafters_bittorrent.src
                 char_str_length[idx] = encodedValue.GetChar();
                 idx++;
             }
-            return BigInteger.Parse(char_str_length);
+            return long.Parse(char_str_length);
         }
     }
 
