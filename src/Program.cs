@@ -28,7 +28,7 @@ if (command == "decode")
     {
         Console.WriteLine(JsonSerializer.Serialize(str_value));
     }
-    else if (decoded_value is BigInteger int_value)
+    else if (decoded_value is long int_value)
     {
         Console.WriteLine(int_value);
     }
