@@ -100,7 +100,7 @@ namespace codecrafters_bittorrent.src
         private static bool IsEncodedDictionary(BencodeEncodedString encodedValue) => encodedValue.CurrentChar == 'd';
 
         // Example: "d3:foo3:bar5:helloi52ee" -> {"hello": 52, "foo":"bar"}
-        private static Dictionary<string, object> DecodeDictionary(BencodeEncodedString encodedValue)
+        public static Dictionary<string, object> DecodeDictionary(BencodeEncodedString encodedValue)
         {
             var decoded_dictionary = new Dictionary<string, object>();
             if (IsEncodedDictionary(encodedValue))
