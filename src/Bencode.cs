@@ -29,7 +29,6 @@ namespace codecrafters_bittorrent.src
             if (encodedValue[0] == 'i' && 
                 encodedValue[encodedValue.Length - 1] == 'e' &&
                 int.TryParse(encodedValue[1..(encodedValue.Length - 1)], out int decoded_int)) {
-                Console.WriteLine(encodedValue[1..(encodedValue.Length - 1)]);
                 return decoded_int;
             }
             throw new InvalidOperationException("Invalid encoded value: " + encodedValue);
