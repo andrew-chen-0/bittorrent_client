@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -24,11 +25,11 @@ namespace codecrafters_bittorrent.src
 
 
         // Example: "i52e" -> "52"
-        public static int DecodeInt(string encodedValue)
+        public static BigInteger DecodeBigInteger(string encodedValue)
         {
             if (encodedValue[0] == 'i' && 
                 encodedValue[encodedValue.Length - 1] == 'e' &&
-                int.TryParse(encodedValue.Substring(1, encodedValue.Length - 2), out int decoded_int)) {
+                BigInteger.TryParse(encodedValue[1..(encodedValue.Length - 1)], out var decoded_int)) {
                 return decoded_int;
             }
             throw new InvalidOperationException("Invalid encoded value: " + encodedValue);

@@ -25,7 +25,7 @@ if (command == "decode")
     }
     else if (encodedValue[0] == 'i')
     {
-        var int_value = Bencode.DecodeInt(encodedValue);
+        var int_value = Bencode.DecodeBigInteger(encodedValue);
         Console.WriteLine(int_value);
     }
     else
