@@ -25,7 +25,7 @@ if (command == "decode")
     else if (encodedValue[0] == 'i')
     {
         var int_value = Bencode.DecodeInt(encodedValue);
-        Console.WriteLine(JsonSerializer.Serialize(int_value));
+        Console.WriteLine(int_value);
     }
     else
     {
