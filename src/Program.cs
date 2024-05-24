@@ -20,7 +20,8 @@ if (command == "decode")
     var encodedValue = param;
     if (Char.IsDigit(encodedValue[0]))
     {
-        Bencode.DecodeString(encodedValue);
+        var str_value = Bencode.DecodeString(encodedValue);
+        Console.WriteLine(JsonSerializer.Serialize(str_value));
     }
     else if (encodedValue[0] == 'i')
     {
