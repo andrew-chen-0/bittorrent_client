@@ -23,23 +23,7 @@ if (command == "decode")
     var encodedValue = new BencodeEncodedString(param);
 
     var decoded_value = Bencode.Decode(encodedValue);
-
-    if (decoded_value is string str_value)
-    {
-        Console.WriteLine(JsonSerializer.Serialize(str_value));
-    }
-    else if (decoded_value is long int_value)
-    {
-        Console.WriteLine(int_value);
-    }
-    else if (decoded_value is List<object> list_value)
-    {
-        Console.WriteLine(JsonSerializer.Serialize(list_value));
-    }
-    else
-    {
-        throw new InvalidOperationException("Unhandled encoded value: " + encodedValue);
-    }
+    Console.WriteLine(JsonSerializer.Serialize(decoded_value));
 }
 else
 {
