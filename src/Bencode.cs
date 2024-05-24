@@ -17,9 +17,9 @@ namespace codecrafters_bittorrent.src
             {
                 return DecodeString(encodedValue);
             }
-            else if(IsEncodedBigInteger(encodedValue))
+            else if(IsEncodedInteger(encodedValue))
             {
-                return DecodeBigInteger(encodedValue);
+                return DecodeInteger(encodedValue);
             }
             else if(IsEncodedList(encodedValue))
             {
@@ -51,12 +51,12 @@ namespace codecrafters_bittorrent.src
         }
 
 
-        private static bool IsEncodedBigInteger(BencodeEncodedString encodedValue) => encodedValue.CurrentChar == 'i';
+        private static bool IsEncodedInteger(BencodeEncodedString encodedValue) => encodedValue.CurrentChar == 'i';
 
         // Example: "i52e" -> "52"
-        private static BigInteger DecodeBigInteger(BencodeEncodedString encodedValue)
+        private static long DecodeInteger(BencodeEncodedString encodedValue)
         {
-            if (!IsEncodedBigInteger(encodedValue))
+            if (!IsEncodedInteger(encodedValue))
             {
                 throw new InvalidOperationException("Invalid encoded value: " + encodedValue);
             }
