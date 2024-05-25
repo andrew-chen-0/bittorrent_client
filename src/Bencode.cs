@@ -153,7 +153,7 @@ namespace codecrafters_bittorrent.src
         {
             if (index >= Length)
             {
-                throw new IndexOutOfRangeException($"{index} > {Length}\n {encodedString}");
+                throw new IndexOutOfRangeException($"{idx} {index} > {Length}\n {encodedString}");
                 throw new ArgumentOutOfRangeException("idx");
             }
         }
