@@ -41,16 +41,16 @@ else if (command == "info")
 
     var decoded_info = Bencode.DecodeDictionary(new BencodeEncodedString(contents));
     
-    if (decoded_info.TryGetValue("announce", out object tracker_url)) 
+    if (decoded_info.TryGetValue("announce", out object? tracker_url)) 
     {
         Console.WriteLine($"Tracker URL: {tracker_url}");
     } else
     {
         throw new InvalidOperationException($"\"announce\" field missing in dictionary");
     }
-    if (decoded_info.TryGetValue("info", out object info_dictionary) && 
+    if (decoded_info.TryGetValue("info", out object? info_dictionary) && 
         info_dictionary is Dictionary<string, object> dict && 
-        dict.TryGetValue("length", out object length))
+        dict.TryGetValue("length", out object? length))
     {
         Console.WriteLine($"Length: {length}");
     }

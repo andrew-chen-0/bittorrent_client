@@ -12,7 +12,7 @@ namespace codecrafters_bittorrent.src
 
     internal static class Bencode
     {
-        public static object Decode(BencodeEncodedString encodedValue) 
+        public static object Decode(BencodeEncodedString encodedValue)
         {
             switch(encodedValue.CurrentChar)
             {
@@ -153,7 +153,7 @@ namespace codecrafters_bittorrent.src
         {
             if (index >= Length)
             {
-                throw new ArgumentOutOfRangeException("idx");
+                throw new ArgumentOutOfRangeException("index");
             }
         }
 
@@ -167,7 +167,7 @@ namespace codecrafters_bittorrent.src
 
         public string GetNextNChars(int n)
         {
-            CheckBounds(idx + n - 1);
+            //CheckBounds(idx + n - 1);
             var sub_string = encodedString.Substring(idx, n);
             idx += n;
             return sub_string;
