@@ -34,11 +34,7 @@ else if (command == "info")
         throw new InvalidOperationException("Provide filename");
     }
 
-    string contents;
-    using (StreamReader streamReader = new StreamReader(param, Encoding.UTF8))
-    {
-        contents = streamReader.ReadToEnd();
-    }
+    var contents = File.ReadAllText(param);
 
     var decoded_info = Bencode.DecodeDictionary(new BencodeEncodedString(contents));
     if (decoded_info.TryGetValue("announce", out object? tracker_url)) 
