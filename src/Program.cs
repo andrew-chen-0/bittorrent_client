@@ -34,13 +34,13 @@ else if (command == "info")
         throw new InvalidOperationException("Provide filename");
     }
 
-    using var file = File.Open(param, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-    var byte_buffer = new byte[file.Length];
-    file.Read(byte_buffer);
-    var contents = Encoding.UTF8.GetString(byte_buffer);
+    string contents;
+    using (StreamReader streamReader = new StreamReader(param, Encoding.UTF8))
+    {
+        contents = streamReader.ReadToEnd();
+    }
 
     var decoded_info = Bencode.DecodeDictionary(new BencodeEncodedString(contents));
-    
     if (decoded_info.TryGetValue("announce", out object? tracker_url)) 
     {
         Console.WriteLine($"Tracker URL: {tracker_url}");
