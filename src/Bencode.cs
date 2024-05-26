@@ -141,10 +141,12 @@ namespace codecrafters_bittorrent.src
     {
         string encodedString;
         int idx = 0;
+        int byte_length = 0;
 
-        public BencodeEncodedString(string encodedString)
+        public BencodeEncodedString(string encodedString, byte[] buffer)
         {
             this.encodedString = encodedString;
+            byte_length = buffer.Length;
         }
 
         public Char CurrentChar => encodedString[idx];
@@ -153,7 +155,7 @@ namespace codecrafters_bittorrent.src
         {
             if (index >= Length)
             {
-                throw new IndexOutOfRangeException($"{idx} {index} > {Length}\n {encodedString}");
+                throw new IndexOutOfRangeException($"{idx} {byte_length} {index} > {Length}\n {encodedString}");
                 throw new ArgumentOutOfRangeException("idx");
             }
         }
