@@ -50,6 +50,9 @@ else if (command == "info")
         dict.TryGetValue("length", out object? length))
     {
         Console.WriteLine($"Length: {length}");
+        var encoded_dictionary = Bencode.Encode(dict);
+        var hash = Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes(encoded_dictionary)));
+        Console.WriteLine($"Info Hash: {hash}");
     }
     else
     {

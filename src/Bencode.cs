@@ -115,6 +115,57 @@ namespace codecrafters_bittorrent.src
             }
             return long.Parse(char_str_length);
         }
+
+        public static string Encode(object value)
+        {
+            if (value is string s)
+            {
+                return EncodeString(s);
+            }
+            else if (value is long l)
+            {
+                return EncodeInteger(l);
+            }
+            else if (value is List<object> list)
+            {
+                return EncodeList(list);
+            }
+            else if(value is Dictionary<string, object> dict)
+            {
+                return EncodeDictionary(dict);
+            }
+            else
+            {
+                throw new InvalidOperationException("Unexpected implelemented type for encoding");
+            }
+        }
+
+        private static string EncodeString(string value) => $"{value.Length}:{value}";
+        private static string EncodeInteger(long value) => $"i{value}e";
+        private static string EncodeList(List<object> list)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("l");
+            foreach (object item in list)
+            {
+                sb.Append(Encode(item));
+            }
+            sb.Append("e");
+            return sb.ToString();     
+        }
+
+        private static string EncodeDictionary(Dictionary<string, object> dict)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("d");
+            foreach(KeyValuePair<string, object> pair in dict)
+            {
+                sb.Append(Encode(pair.Key));
+                sb.Append(Encode(pair.Value));
+            }
+            sb.Append("e");
+            return sb.ToString();
+        }
     }
 
     internal class BencodeEncodedString
