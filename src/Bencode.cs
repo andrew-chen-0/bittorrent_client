@@ -13,7 +13,7 @@ namespace codecrafters_bittorrent.src
 
     internal static class Bencode
     {
-        public static object Decode(BencodeEncodedString encodedValue)
+        public static object Decode(BencodeEncodedString encodedValue, bool encode_string = false)
         {
             switch (encodedValue.CurrentChar)
             {
@@ -27,13 +27,14 @@ namespace codecrafters_bittorrent.src
                 case '7':
                 case '8':
                 case '9':
-                    return DecodeString(encodedValue);
+                    var bytes = DecodeString(encodedValue);
+                    return (encode_string) ? Encoding.UTF8.GetString(bytes) : bytes;
                 case 'i':
                     return DecodeInteger(encodedValue);
                 case 'l':
-                    return DecodeList(encodedValue);
+                    return DecodeList(encodedValue, encode_string);
                 case 'd':
-                    return DecodeDictionary(encodedValue);
+                    return DecodeDictionary(encodedValue, encode_string);
                 default:
                     throw new InvalidOperationException("Unhandled encoded value: " + encodedValue);
             }
@@ -70,20 +71,20 @@ namespace codecrafters_bittorrent.src
 
 
         // Example: "le" -> [] "l5:helloi5ee" -> ["hello", "5"]
-        private static List<object> DecodeList(BencodeEncodedString encodedValue)
+        private static List<object> DecodeList(BencodeEncodedString encodedValue, bool encode_string)
         {
             var decoded_list = new List<object>();
             encodedValue.ReadNextChar(); // Clears 'l' character
             while (encodedValue.CurrentChar != 'e')
             {
-                decoded_list.Add(Decode(encodedValue));
+                decoded_list.Add(Decode(encodedValue, encode_string));
             }
             encodedValue.ReadNextChar(); // Clears 'e' character
             return decoded_list;
         }
 
         // Example: "d3:foo3:bar5:helloi52ee" -> {"hello": 52, "foo":"bar"}
-        private static Dictionary<string, object> DecodeDictionary(BencodeEncodedString encodedValue)
+        private static Dictionary<string, object> DecodeDictionary(BencodeEncodedString encodedValue, bool encode_string)
         {
             var decoded_dictionary = new Dictionary<string, object>();
 
@@ -91,7 +92,7 @@ namespace codecrafters_bittorrent.src
             while (encodedValue.CurrentChar != 'e')
             {
                 var key = Encoding.UTF8.GetString(DecodeString(encodedValue));
-                var value = Decode(encodedValue);
+                var value = Decode(encodedValue, encode_string);
                 decoded_dictionary.Add(key, value);
             }
             return decoded_dictionary;
