@@ -40,8 +40,9 @@ namespace codecrafters_bittorrent.src
 
         }
 
-        // Example: "5:hello" -> "hello"
-        private static string DecodeString(BencodeEncodedString encodedValue)
+        // Example: "5:hello" -> "hello
+        // Returns as byte array since the while encoding is usually UTF8 for the "pieces" key it is binary
+        private static byte[] DecodeString(BencodeEncodedString encodedValue)
         {
             var str_length = ParseInteger(encodedValue);
             if (encodedValue.ReadNextChar() != ':')
@@ -49,8 +50,7 @@ namespace codecrafters_bittorrent.src
                 throw new InvalidOperationException("Invalid encoded value: " + encodedValue);
             }
 
-            var result_bytes = encodedValue.ReadNextNBytes((int)str_length);
-            return Encoding.UTF8.GetString(result_bytes);
+            return encodedValue.ReadNextNBytes((int)str_length);
         }
 
 
@@ -90,17 +90,9 @@ namespace codecrafters_bittorrent.src
             encodedValue.ReadNextChar();
             while (encodedValue.CurrentChar != 'e')
             {
-                var key = DecodeString(encodedValue);
+                var key = Encoding.UTF8.GetString(DecodeString(encodedValue));
                 var value = Decode(encodedValue);
-                if (key is not string)
-                {
-                    throw new InvalidOperationException("Invalid encoded value: " + encodedValue);
-                }
                 decoded_dictionary.Add(key, value);
-            }
-            if (encodedValue.ReadNextChar() != 'e')
-            {
-                throw new InvalidOperationException("Invalid encoded value: " + encodedValue);
             }
             return decoded_dictionary;
         }
@@ -135,17 +127,23 @@ namespace codecrafters_bittorrent.src
             {
                 EncodeDictionary(dict, memoryStream);
             }
+            else if (value is byte[] byte_array)
+            {
+                EncodeByteString(byte_array, memoryStream);
+            }
             else
             {
                 throw new InvalidOperationException("Unexpected implemented type for encoding");
             }
         }
 
-        private static void EncodeString(string value, MemoryStream memoryStream) {
-            var byte_array = Encoding.UTF8.GetBytes(value);
+        private static void EncodeByteString(byte[] byte_array, MemoryStream memoryStream)
+        {
             memoryStream.Write(Encoding.ASCII.GetBytes($"{byte_array.Length}:"));
             memoryStream.Write(byte_array);
         }
+
+        private static void EncodeString(string value, MemoryStream memoryStream) => memoryStream.Write(Encoding.UTF8.GetBytes($"{value.Length}:{value}"));
         private static void EncodeInteger(long value, MemoryStream memoryStream) => memoryStream.Write(Encoding.ASCII.GetBytes($"i{value}e"));
         private static void EncodeList(List<object> list, MemoryStream memoryStream)
         {
