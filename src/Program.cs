@@ -22,7 +22,7 @@ if (command == "decode")
     {
         throw new InvalidOperationException("Provide encoded value");
     }
-    var encodedValue = new BencodeEncodedString(param, new byte[0]);
+    var encodedValue = new BencodeEncodedString(param);
 
     var decoded_value = Bencode.Decode(encodedValue);
     Console.WriteLine(JsonSerializer.Serialize(decoded_value));
@@ -35,11 +35,8 @@ else if (command == "info")
     }
 
     using var file = File.Open(param, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-    var byte_buffer = new byte[file.Length];
-    file.Read(byte_buffer);
-    var contents = Encoding.UTF8.GetString(byte_buffer);
 
-    var decoded_info = Bencode.DecodeDictionary(new BencodeEncodedString(contents, byte_buffer));
+    var decoded_info = (Dictionary<string, object>) Bencode.Decode(new BencodeEncodedString(file));
     
     if (decoded_info.TryGetValue("announce", out object? tracker_url)) 
     {
