@@ -34,16 +34,26 @@ namespace codecrafters_bittorrent.src
                 throw new InvalidOperationException($"\"announce\" field missing in dictionary");
             }
             if (decoded_info.TryGetValue("info", out object? info_dictionary) &&
-                info_dictionary is Dictionary<string, object> dict &&
-                dict.TryGetValue("length", out object? length))
+                info_dictionary is Dictionary<string, object> dict)
             {
-                Console.WriteLine($"Length: {length}");
+                Console.WriteLine($"Length: {dict["length"]}");
 
                 var memory_stream = new MemoryStream();
                 Bencode.Encode(dict, memory_stream);
                 var encoded_dict = memory_stream.ToArray();
                 var hash = Convert.ToHexString(SHA1.HashData(encoded_dict));
                 Console.WriteLine($"Info Hash: {hash}");
+
+                var piece_length = (long)dict["piece length"];
+                Console.WriteLine($"Piece Length: {piece_length}");
+
+                Console.WriteLine("Pieces:");
+                var byte_array = (byte[])dict["pieces"];
+                for (int i = 0; i < byte_array.Length; i += 20) // 20 is hash size
+                {
+                    Console.WriteLine(Convert.ToHexString(byte_array[i..(i + 20)]));
+                }
+                
             }
             else
             {
