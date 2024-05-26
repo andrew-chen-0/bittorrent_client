@@ -22,7 +22,7 @@ if (command == "decode")
     {
         throw new InvalidOperationException("Provide encoded value");
     }
-    var encodedValue = new BencodeEncodedString(param);
+    var encodedValue = new BencodeEncodedString(param, new byte[0]);
 
     var decoded_value = Bencode.Decode(encodedValue);
     Console.WriteLine(JsonSerializer.Serialize(decoded_value));
