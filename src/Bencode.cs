@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -14,7 +15,7 @@ namespace codecrafters_bittorrent.src
     {
         public static object Decode(BencodeEncodedString encodedValue)
         {
-            switch(encodedValue.CurrentChar)
+            switch (encodedValue.CurrentChar)
             {
                 case '0':
                 case '1':
@@ -38,7 +39,7 @@ namespace codecrafters_bittorrent.src
             }
 
         }
-        
+
         // Example: "5:hello" -> "hello"
         private static string DecodeString(BencodeEncodedString encodedValue)
         {
@@ -48,7 +49,7 @@ namespace codecrafters_bittorrent.src
                 throw new InvalidOperationException("Invalid encoded value: " + encodedValue);
             }
 
-            var result_bytes = encodedValue.ReadNextNBytes((int) str_length);
+            var result_bytes = encodedValue.ReadNextNBytes((int)str_length);
             return Encoding.UTF8.GetString(result_bytes);
         }
 
@@ -85,7 +86,7 @@ namespace codecrafters_bittorrent.src
         private static Dictionary<string, object> DecodeDictionary(BencodeEncodedString encodedValue)
         {
             var decoded_dictionary = new Dictionary<string, object>();
-            
+
             encodedValue.ReadNextChar();
             while (encodedValue.CurrentChar != 'e')
             {
@@ -116,55 +117,55 @@ namespace codecrafters_bittorrent.src
             return long.Parse(char_str_length);
         }
 
-        public static string Encode(object value)
+        public static void Encode(object value, MemoryStream memoryStream)
         {
             if (value is string s)
             {
-                return EncodeString(s);
+                EncodeString(s, memoryStream);
             }
             else if (value is long l)
             {
-                return EncodeInteger(l);
+                EncodeInteger(l, memoryStream);
             }
             else if (value is List<object> list)
             {
-                return EncodeList(list);
+                EncodeList(list, memoryStream);
             }
-            else if(value is Dictionary<string, object> dict)
+            else if (value is Dictionary<string, object> dict)
             {
-                return EncodeDictionary(dict);
+                EncodeDictionary(dict, memoryStream);
             }
             else
             {
-                throw new InvalidOperationException("Unexpected implelemented type for encoding");
+                throw new InvalidOperationException("Unexpected implemented type for encoding");
             }
         }
 
-        private static string EncodeString(string value) => $"{value.Length}:{value}";
-        private static string EncodeInteger(long value) => $"i{value}e";
-        private static string EncodeList(List<object> list)
+        private static void EncodeString(string value, MemoryStream memoryStream) {
+            var byte_array = Encoding.UTF8.GetBytes(value);
+            memoryStream.Write(Encoding.ASCII.GetBytes($"{byte_array.Length}:"));
+            memoryStream.Write(byte_array);
+        }
+        private static void EncodeInteger(long value, MemoryStream memoryStream) => memoryStream.Write(Encoding.ASCII.GetBytes($"i{value}e"));
+        private static void EncodeList(List<object> list, MemoryStream memoryStream)
         {
-            StringBuilder sb = new StringBuilder();
-            sb.Append("l");
+            memoryStream.WriteByte((byte)'l');
             foreach (object item in list)
             {
-                sb.Append(Encode(item));
+                Encode(item, memoryStream);
             }
-            sb.Append("e");
-            return sb.ToString();     
+            memoryStream.WriteByte((byte)'e');
         }
 
-        private static string EncodeDictionary(Dictionary<string, object> dict)
+        private static void EncodeDictionary(Dictionary<string, object> dict, MemoryStream memoryStream)
         {
-            StringBuilder sb = new StringBuilder();
-            sb.Append("d");
-            foreach(KeyValuePair<string, object> pair in dict)
+            memoryStream.WriteByte((byte)'d');
+            foreach (KeyValuePair<string, object> pair in dict)
             {
-                sb.Append(Encode(pair.Key));
-                sb.Append(Encode(pair.Value));
+                Encode(pair.Key, memoryStream);
+                Encode(pair.Value, memoryStream);
             }
-            sb.Append("e");
-            return sb.ToString();
+            memoryStream.WriteByte((byte)'e');
         }
     }
 
