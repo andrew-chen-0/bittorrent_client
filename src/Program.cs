@@ -39,7 +39,7 @@ else if (command == "info")
     file.Read(byte_buffer);
     var contents = Encoding.UTF8.GetString(byte_buffer);
 
-    var decoded_info = Bencode.DecodeDictionary(new BencodeEncodedString(contents));
+    var decoded_info = Bencode.DecodeDictionary(new BencodeEncodedString(contents, byte_buffer));
     
     if (decoded_info.TryGetValue("announce", out object? tracker_url)) 
     {
