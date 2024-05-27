@@ -27,7 +27,7 @@ namespace codecrafters_bittorrent.src
 
             if (decoded_info.TryGetValue("announce", out object? tracker_url))
             {
-                Console.WriteLine($"Tracker URL: {tracker_url}");
+                Console.WriteLine($"Tracker URL: {Encoding.UTF8.GetString((byte[])tracker_url)}");
             }
             else
             {
