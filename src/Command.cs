@@ -42,7 +42,7 @@ namespace codecrafters_bittorrent.src
                 Bencode.Encode(dict, memory_stream);
                 var encoded_dict = memory_stream.ToArray();
                 var hash = Convert.ToHexString(SHA1.HashData(encoded_dict));
-                Console.WriteLine($"Info Hash: {hash}");
+                Console.WriteLine($"Info Hash: {hash.ToLower()}");
 
                 var piece_length = (long)dict["piece length"];
                 Console.WriteLine($"Piece Length: {piece_length}");
