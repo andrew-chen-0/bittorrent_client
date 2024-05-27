@@ -51,7 +51,7 @@ namespace codecrafters_bittorrent.src
                 var byte_array = (byte[])dict["pieces"];
                 for (int i = 0; i < byte_array.Length; i += 20) // 20 is hash size
                 {
-                    Console.WriteLine(Convert.ToHexString(byte_array[i..(i + 20)]));
+                    Console.WriteLine(Convert.ToHexString(byte_array[i..(i + 20)]).ToLower());
                 }
                 
             }
