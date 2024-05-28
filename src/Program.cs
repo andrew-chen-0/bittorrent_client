@@ -32,6 +32,14 @@ else if (command == "info")
     }
     Command.DecodeFileAndPrintInfo(param);
 }
+else if (command == "peers")
+{
+    if (param == null)
+    {
+        throw new InvalidOperationException("Provide filename");
+    }
+    Command.DecodeFileAndFindPeers(param);
+}
 else
 {
     throw new InvalidOperationException($"Invalid command: {command}");

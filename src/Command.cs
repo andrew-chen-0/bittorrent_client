@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace codecrafters_bittorrent.src
 {
@@ -25,23 +27,19 @@ namespace codecrafters_bittorrent.src
 
             var decoded_info = (Dictionary<string, object>)Bencode.Decode(new BencodeEncodedString(file));
 
-            if (decoded_info.TryGetValue("announce", out object? tracker_url))
+            if (decoded_info.TryGetValue("announce", out byte[] tracker_url))
             {
-                Console.WriteLine($"Tracker URL: {Encoding.UTF8.GetString((byte[])tracker_url)}");
+                Console.WriteLine($"Tracker URL: {Encoding.UTF8.GetString(tracker_url)}");
             }
             else
             {
                 throw new InvalidOperationException($"\"announce\" field missing in dictionary");
             }
-            if (decoded_info.TryGetValue("info", out object? info_dictionary) &&
-                info_dictionary is Dictionary<string, object> dict)
+            if (decoded_info.TryGetValue("info", out Dictionary<string, object> dict))
             {
                 Console.WriteLine($"Length: {dict["length"]}");
 
-                var memory_stream = new MemoryStream();
-                Bencode.Encode(dict, memory_stream);
-                var encoded_dict = memory_stream.ToArray();
-                var hash = Convert.ToHexString(SHA1.HashData(encoded_dict));
+                var hash = Convert.ToHexString(GetInfoHash(dict));
                 Console.WriteLine($"Info Hash: {hash.ToLower()}");
 
                 var piece_length = (long)dict["piece length"];
@@ -59,6 +57,63 @@ namespace codecrafters_bittorrent.src
             {
                 throw new InvalidOperationException($"\"info: length\" field missing in dictionary");
             }
+        }
+
+        public static void DecodeFileAndFindPeers(string filename)
+        {
+            using var file = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+
+            var decoded_info = (Dictionary<string, object>)Bencode.Decode(new BencodeEncodedString(file));
+            var info_dictionary = decoded_info.GetDictionary("info");
+            var tracker_url = Encoding.UTF8.GetString(decoded_info.GetValue<byte[]>("announce"));
+
+            var get_params = new Dictionary<string, object>
+            {
+                { "info_hash", HttpUtility.UrlEncode(GetInfoHash(info_dictionary)) },
+                { "peer_id", Guid.NewGuid().ToString().Substring(0,20) },
+                { "port", 6881 },
+                { "uploaded", 0 },
+                { "downloaded", 0 },
+                { "left", info_dictionary["length"] },
+                { "compact", 1 }
+            };
+
+            HttpService service = new HttpService();
+            var task = service.GetAsync(tracker_url, get_params);
+            task.Wait();
+
+            if (task.IsCompletedSuccessfully)
+            {
+                var stream = new MemoryStream(task.Result);
+                var peers_dict = (Dictionary<string, object>)Bencode.Decode(new BencodeEncodedString(stream));
+                var addresses = GetPeers(peers_dict.GetValue<byte[]>("peers"));
+                addresses.ForEach(address => Console.WriteLine(address.ToString()));
+            }
+
+        }
+
+        public static byte[] GetInfoHash(Dictionary<string, object> dict)
+        {
+            var memory_stream = new MemoryStream();
+            Bencode.Encode(dict, memory_stream);
+            var encoded_dict = memory_stream.ToArray();
+            return SHA1.HashData(encoded_dict);
+        }
+
+        public static List<IPEndPoint> GetPeers(byte[] bytes)
+        {
+            if (bytes.Length % 6 != 0)
+            {
+                throw new InvalidOperationException("Bytes array should be divisible by 6");
+            }
+            var peers = new List<IPEndPoint>();
+            for(int i = 0; i < bytes.Length; i += 6)
+            {
+                var ip = BitConverter.ToInt32(bytes, i);
+                var port = BitConverter.ToUInt16(bytes, i + 4);
+                peers.Add(new IPEndPoint(ip, port));
+            }
+            return peers;
         }
     }
 }
