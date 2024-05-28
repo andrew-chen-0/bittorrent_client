@@ -109,7 +109,7 @@ namespace codecrafters_bittorrent.src
             var peers = new List<IPEndPoint>();
             for(int i = 0; i < bytes.Length; i += 6)
             {
-                var ip = BitConverter.ToInt32(bytes, i);
+                var ip = new IPAddress(bytes[i..(i + 4)]);
                 var port = BitConverter.ToUInt16(bytes, i + 4);
                 peers.Add(new IPEndPoint(ip, port));
             }
