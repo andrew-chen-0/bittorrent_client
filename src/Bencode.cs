@@ -100,7 +100,7 @@ namespace codecrafters_bittorrent.src
 
         private static long ParseInteger(BencodeEncodedString encodedValue)
         {
-            if (!Char.IsDigit(encodedValue.CurrentChar))
+            if (!(Char.IsDigit(encodedValue.CurrentChar) || encodedValue.CurrentChar == '-'))
             {
                 throw new InvalidOperationException("Attempted to pass character as an integer");
             }
