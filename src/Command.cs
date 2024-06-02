@@ -78,7 +78,7 @@ namespace codecrafters_bittorrent.src
             using var peer = new Peer(endpoint);
             var result = peer.HandshakeAsync(info_hash, peer_id);
             result.Wait();
-            Console.WriteLine("Peer ID:" + Convert.ToHexString(result.Result[48..68]).ToLower());
+            Console.WriteLine("Peer ID: " + Convert.ToHexString(result.Result[48..68]).ToLower());
         }
     }
 }
