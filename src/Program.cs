@@ -40,6 +40,14 @@ else if (command == "peers")
     }
     Command.DecodeFileAndFindPeers(param);
 }
+else if (command == "handshake")
+{
+    if (param == null || args[2] == null)
+    {
+        throw new InvalidOperationException("Provide filename and peer address");
+    }
+    Command.HandshakePeer(param, args[2]);
+}
 else
 {
     throw new InvalidOperationException($"Invalid command: {command}");

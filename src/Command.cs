@@ -23,9 +23,7 @@ namespace codecrafters_bittorrent.src
 
         public static void DecodeFileAndPrintInfo(string filename)
         {
-            using var file = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-
-            var decoded_info = (Dictionary<string, object>)Bencode.Decode(new BencodeEncodedString(file));
+            var decoded_info = BitTorrent.OpenTorrentFile(filename);
 
             if (decoded_info.TryGetValue("announce", out byte[] tracker_url))
             {
@@ -39,7 +37,7 @@ namespace codecrafters_bittorrent.src
             {
                 Console.WriteLine($"Length: {dict["length"]}");
 
-                var hash = Convert.ToHexString(GetInfoHash(dict));
+                var hash = Convert.ToHexString(BitTorrent.GetInfoHash(dict));
                 Console.WriteLine($"Info Hash: {hash.ToLower()}");
 
                 var piece_length = (long)dict["piece length"];
@@ -61,59 +59,26 @@ namespace codecrafters_bittorrent.src
 
         public static void DecodeFileAndFindPeers(string filename)
         {
-            using var file = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-
-            var decoded_info = (Dictionary<string, object>)Bencode.Decode(new BencodeEncodedString(file));
+            var decoded_info = BitTorrent.OpenTorrentFile(filename);
             var info_dictionary = decoded_info.GetDictionary("info");
             var tracker_url = Encoding.UTF8.GetString(decoded_info.GetValue<byte[]>("announce"));
 
-            var get_params = new Dictionary<string, object>
-            {
-                { "info_hash", HttpUtility.UrlEncode(GetInfoHash(info_dictionary)) },
-                { "peer_id", Guid.NewGuid().ToString().Substring(0,20) },
-                { "port", 6881 },
-                { "uploaded", 0 },
-                { "downloaded", 0 },
-                { "left", info_dictionary["length"] },
-                { "compact", 1 }
-            };
-
-            HttpService service = new HttpService();
-            var task = service.GetAsync(tracker_url, get_params);
-            task.Wait();
-
-            if (task.IsCompletedSuccessfully)
-            {
-                var stream = new MemoryStream(task.Result);
-                var peers_dict = (Dictionary<string, object>)Bencode.Decode(new BencodeEncodedString(stream));
-                var addresses = GetPeers(peers_dict.GetValue<byte[]>("peers"));
-                addresses.ForEach(address => Console.WriteLine(address.ToString()));
-            }
-
+            var addresses = BitTorrent.FindPeers(tracker_url, info_dictionary);
+            addresses.ForEach(address => Console.WriteLine(address.ToString()));
         }
 
-        public static byte[] GetInfoHash(Dictionary<string, object> dict)
+        public static void HandshakePeer(string filename, string address)
         {
-            var memory_stream = new MemoryStream();
-            Bencode.Encode(dict, memory_stream);
-            var encoded_dict = memory_stream.ToArray();
-            return SHA1.HashData(encoded_dict);
-        }
+            var decoded_info = BitTorrent.OpenTorrentFile(filename);
+            var info_dictionary = decoded_info.GetDictionary("info");
+            var info_hash = BitTorrent.GetInfoHash(info_dictionary);
+            var peer_id = Encoding.UTF8.GetBytes("00112233445566778899");
 
-        public static List<IPEndPoint> GetPeers(byte[] bytes)
-        {
-            if (bytes.Length % 6 != 0)
-            {
-                throw new InvalidOperationException("Bytes array should be divisible by 6");
-            }
-            var peers = new List<IPEndPoint>();
-            for(int i = 0; i < bytes.Length; i += 6)
-            {
-                var ip = new IPAddress(bytes[i..(i + 4)]);
-                var port = ((int)bytes[i + 4] << 8) + (int)bytes[i + 5];
-                peers.Add(new IPEndPoint(ip, port));
-            }
-            return peers;
+            var endpoint = Util.CreateIPEndPoint(address);
+            using var peer = new Peer(endpoint);
+            var result = peer.HandshakeAsync(info_hash, peer_id);
+            result.Wait();
+            Console.WriteLine("Peer ID:" + Convert.ToHexString(result.Result[48..68]));
         }
     }
 }
