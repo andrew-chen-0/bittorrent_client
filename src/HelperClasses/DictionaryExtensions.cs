@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace codecrafters_bittorrent.src
+namespace codecrafters_bittorrent
 {
     internal static class DictionaryExtensions
     {

@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 
-namespace codecrafters_bittorrent.src
+namespace codecrafters_bittorrent
 {
     internal class HttpService
     {

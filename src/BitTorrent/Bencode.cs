@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace codecrafters_bittorrent.src
+namespace codecrafters_bittorrent
 {
 
     internal static class Bencode
@@ -28,7 +28,7 @@ namespace codecrafters_bittorrent.src
                 case '8':
                 case '9':
                     var bytes = DecodeString(encodedValue);
-                    return (encode_string) ? Encoding.UTF8.GetString(bytes) : bytes;
+                    return encode_string ? Encoding.UTF8.GetString(bytes) : bytes;
                 case 'i':
                     return DecodeInteger(encodedValue);
                 case 'l':
@@ -100,13 +100,13 @@ namespace codecrafters_bittorrent.src
 
         private static long ParseInteger(BencodeEncodedString encodedValue)
         {
-            if (!(Char.IsDigit(encodedValue.CurrentChar) || encodedValue.CurrentChar == '-'))
+            if (!(char.IsDigit(encodedValue.CurrentChar) || encodedValue.CurrentChar == '-'))
             {
                 throw new InvalidOperationException("Attempted to pass character as an integer");
             }
             int idx = 0;
             char[] char_str_length = new char[19];
-            while (Char.IsDigit(encodedValue.CurrentChar) || encodedValue.CurrentChar == '-')
+            while (char.IsDigit(encodedValue.CurrentChar) || encodedValue.CurrentChar == '-')
             {
                 char_str_length[idx] = encodedValue.ReadNextChar();
                 idx++;
@@ -184,7 +184,7 @@ namespace codecrafters_bittorrent.src
 
         public BencodeEncodedString(Stream input_stream)
         {
-            this.inputStream = input_stream;
+            inputStream = input_stream;
         }
 
         private void CheckBounds(int offset)
@@ -195,19 +195,19 @@ namespace codecrafters_bittorrent.src
             }
         }
 
-        public Char ReadCurrentChar()
+        public char ReadCurrentChar()
         {
             var current_char = ReadNextChar();
             inputStream.Position--;
             return current_char;
         }
 
-        public Char ReadNextChar()
+        public char ReadNextChar()
         {
             CheckBounds(0);
             var read_byte = new byte[1];
             inputStream.Read(read_byte, 0, 1);
-            return (char) read_byte[0];
+            return (char)read_byte[0];
         }
 
         public byte[] ReadNextNBytes(int n)
@@ -218,6 +218,6 @@ namespace codecrafters_bittorrent.src
             return bytes;
         }
 
-        public Char CurrentChar => ReadCurrentChar();
+        public char CurrentChar => ReadCurrentChar();
     }
 }
