@@ -8,11 +8,11 @@ using System.Web;
 
 namespace codecrafters_bittorrent
 {
-    internal class BitTorrentFile
+    internal class TorrentFile
     {
         Dictionary<string, object> metadata;
 
-        public BitTorrentFile(string filename)
+        public TorrentFile(string filename)
         {
             metadata = OpenTorrentFile(filename);
         }

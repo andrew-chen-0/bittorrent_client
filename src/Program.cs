@@ -48,6 +48,14 @@ else if (command == "handshake")
     }
     Command.HandshakePeer(param, args[2]);
 }
+else if  (command == "download_piece")
+{
+    if (args.Length != 4)
+    {
+        throw new InvalidOperationException("download_piece usage: download_piece -o {output_file} {input_file} {index}");
+    }
+
+}
 else
 {
     throw new InvalidOperationException($"Invalid command: {command}");
