@@ -62,9 +62,22 @@ namespace codecrafters_bittorrent
             }
             var addresses = file.FindPeers();
             var peer_id = Encoding.UTF8.GetBytes("00112233445566778899");
-            var endpoint = Util.CreateIPEndPoint(addresses[0]);
-            using var peer = new Peer(endpoint);
+            using var peer = new Peer(addresses[0]);
             var result = peer.HandshakeAsync(file.InfoHash, peer_id);
+            result.Wait();
+
+            var end_index = (int)(file.Length / file.PieceLength);
+            if (index < 0 || index > end_index)
+            {
+                throw new InvalidOperationException($"Index out of range for Piece Count: {file.PieceLength}");
+            }
+
+            var piece_size = index == end_index ? file.Length % file.PieceLength : file.PieceLength;
+            var piece_bytes = peer.DownloadPieceAsync(index, piece_size);
+            piece_bytes.Wait();
+
+            File.WriteAllBytes(temp_filename, piece_bytes.Result);
+            Console.WriteLine($"Piece {index} downloaded to {temp_filename}");
         }
     }
 }

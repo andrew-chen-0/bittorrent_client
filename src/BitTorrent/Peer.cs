@@ -24,13 +24,15 @@ namespace codecrafters_bittorrent
 
     /// <summary>
     /// Peer Connection Process
-    /// 1. Handshake
-    /// 2. Bitfield message
-    /// 3. Interested Message
+    /// 1. Handshake (send)
+    /// 2. Bitfield message (read)
+    /// 3. Interested Message (send)
     /// </summary>
     internal class Peer : IDisposable
     {
         readonly static string PROTOCOL_HEADER = "BitTorrent protocol";
+
+        public readonly static int BLOCK_SIZE = 16 * 1024;
 
         IPEndPoint address;
         Socket client;
@@ -76,51 +78,68 @@ namespace codecrafters_bittorrent
             return new byte[0];
         }
 
-        public async Task<bool> DeclareInterest()
+        public async Task DeclareInterest()
         {
             await SendPeerMessageAsync(PeerMessageID.INTERESTED, []);
-            var task = RecievePeerMessageAsync(5);
-            if (await Task.WhenAny(task, Task.Delay(1000)) == task)
-            {
-                // task completed within timeout
-                return (int)task.Result[5] == (int)PeerMessageID.UNCHOKE;
-            }
-            else
-            {
-                // timeout logic
-                return false;
-            }
+            await RecievePeerMessageAsync(PeerMessageID.UNCHOKE);
         }
 
-        public async Task<byte[]> DownloadPieceAsync(int index, int block_length)
+        public async Task<byte[]> ReadBitfieldAsync()
         {
-            int begin_offset = index * 16 * 1024;
+            var bitfield_message = await RecievePeerMessageAsync(PeerMessageID.BITFIELD);
+            
+            return bitfield_message[0..bitfield_message.Length];
+        }
+
+        public async Task<byte[]> DownloadPieceAsync(int piece_index, long piece_length)
+        {
+            await ReadBitfieldAsync();
+            await DeclareInterest();
+            byte[] piece = new byte[piece_length];
+            for (int i = 0; i * BLOCK_SIZE < piece_length; i++)
+            {
+                var begin_offset = i * BLOCK_SIZE;
+                var block_size = ((i + 1) * BLOCK_SIZE > piece_length) ? (int)(piece_length % BLOCK_SIZE) : BLOCK_SIZE;
+                var piece_block = await DownloadPieceBlockAsync(piece_index, begin_offset, block_size);
+                piece_block.CopyTo(piece, begin_offset);
+            }
+            return piece;
+        }
+
+        private async Task<byte[]> DownloadPieceBlockAsync(int piece_index, int begin_offset, int block_size)
+        {
+            
             byte[] payload = new byte[4 * 3]; // int index, begin, payload
 
             // Copy to payload
-            BitConverter.GetBytes(index).CopyTo(payload, 0);
-            BitConverter.GetBytes(begin_offset).CopyTo(payload, 4);
-            BitConverter.GetBytes(block_length).CopyTo(payload, 8);
+            ConvertToBytes(piece_index).CopyTo(payload, 0);
+            ConvertToBytes(begin_offset).CopyTo(payload, 4);
+            ConvertToBytes(block_size).CopyTo(payload, 8);
 
             await SendPeerMessageAsync(PeerMessageID.REQUEST, payload);
-            var piece_message = await RecievePeerMessageAsync(block_length + 5);
+            var piece_message = await RecievePeerMessageAsync(PeerMessageID.PIECE);
             if (piece_message != null) {
-                int length = BitConverter.ToInt32(piece_message[0..4]);
-                int message = (int)piece_message[4];
-                if (length != block_length + 5)
+                if (ConvertToInt(piece_message[0..4]) != piece_index)
                 {
-                    throw new InvalidOperationException($"Message Length was expected to be {block_length + 5} but got {length}");
+                    throw new InvalidOperationException($"Responding piece index was not same as requested piece index");
                 }
-                if (message != (int)PeerMessageID.PIECE)
+
+                if (ConvertToInt(piece_message[4..8]) != begin_offset)
                 {
-                    throw new InvalidOperationException($"Message ID was not Piece");
+                    throw new InvalidOperationException($"Responding offset was not same as requested offset");
                 }
-                return piece_message[5..piece_message.Length];
+
+                if (piece_message.Length - 8 != block_size)
+                {
+                    throw new InvalidOperationException($"Message Length was expected to be {block_size} bytes but got {piece_message.Length - 8} bytes");
+                }
+                
+                return piece_message[8..piece_message.Length];
             }
             throw new InvalidOperationException("Failed to receive piece message");
         }
 
-        // 1. Length of message (4 bytes)
+        // 1. Length of payload (4 bytes)
         // 2. Message ID (1 byte)
         // 3. Payload (Variable bytes)
         private async Task SendPeerMessageAsync(PeerMessageID messageID, byte[] payload)
@@ -130,22 +149,60 @@ namespace codecrafters_bittorrent
                 throw new InvalidOperationException("Peer has not been handshaked");
             }
             byte[] request = new byte[payload.Length + 5];
-            var length = BitConverter.GetBytes(payload.Length + 5);
+            var length = ConvertToBytes(payload.Length + 1);
             if (length.Length != 4)
             {
                 throw new InvalidOperationException("Byte array length should be 4");
             }
-            request[5] = (byte)messageID;
-            payload.CopyTo(request, 6);
+            length.CopyTo(request, 0);
+            request[4] = (byte)messageID;
+            payload.CopyTo(request, 5);
             await client.SendAsync(request, SocketFlags.None);
 
         }
 
-        private async Task<byte[]> RecievePeerMessageAsync(int expected_size = 1024)
+        private async Task<byte[]> RecievePeerMessageAsync(PeerMessageID expectedMessageID)
         {
-            var buffer = new byte[expected_size];
-            _ = await client.ReceiveAsync(buffer, SocketFlags.None);
+            var data_buffer = new byte[5];
+            _ = await client.ReceiveAsync(data_buffer, SocketFlags.None);
+            int length = ConvertToInt(data_buffer[0..4]);
+            int messageID = data_buffer[4];
+            if (messageID != (int)expectedMessageID)
+            {
+                throw new InvalidOperationException($"Expected message id: {expectedMessageID} got {messageID}");
+            }
+
+
+            byte[] buffer = [];
+            if (length - 1 > 0)
+            {
+                buffer = new byte[length - 1];
+                _ = await client.ReceiveAsync(buffer, SocketFlags.None);
+            }
+
             return buffer;
+        }
+
+        // Integers have to be Big Endian
+        private byte[] ConvertToBytes(int value)
+        {
+            int intValue;
+            byte[] intBytes = BitConverter.GetBytes(value);
+            if (BitConverter.IsLittleEndian)
+                Array.Reverse(intBytes);
+
+            return intBytes;
+        }
+
+        private int ConvertToInt(byte[] bytes)
+        {
+            if (bytes.Length != 4)
+            {
+                throw new InvalidOperationException("Bytes has to be 4 to become int32");
+            }
+            if (BitConverter.IsLittleEndian)
+                Array.Reverse(bytes);
+            return BitConverter.ToInt32(bytes);
         }
 
         public void Dispose()

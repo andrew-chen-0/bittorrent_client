@@ -50,11 +50,11 @@ else if (command == "handshake")
 }
 else if  (command == "download_piece")
 {
-    if (args.Length != 4)
+    if (args.Length != 5 && param == "-o")
     {
         throw new InvalidOperationException("download_piece usage: download_piece -o {output_file} {input_file} {index}");
     }
-
+    Command.DownloadPiece(args[2], args[3], Int32.Parse(args[4]));
 }
 else
 {

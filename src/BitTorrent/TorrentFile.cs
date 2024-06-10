@@ -79,7 +79,7 @@ namespace codecrafters_bittorrent
                 { "port", 6881 },
                 { "uploaded", 0 },
                 { "downloaded", 0 },
-                { "left", metadata["length"] },
+                { "left", Length },
                 { "compact", 1 }
             };
 
