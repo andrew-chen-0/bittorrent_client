@@ -107,6 +107,12 @@ namespace codecrafters_bittorrent
             return bitfield_message;
         }
 
+        /// <summary>
+        /// Download file through from concurrent Queue of files
+        /// </summary>
+        /// <param name="pieces_queue"></param>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException"></exception>
         public async Task DownloadFile(ConcurrentQueue<Piece> pieces_queue)
         {
             while (pieces_queue.TryDequeue(out var piece))
