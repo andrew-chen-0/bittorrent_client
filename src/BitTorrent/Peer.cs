@@ -81,12 +81,12 @@ namespace codecrafters_bittorrent
         public async Task DeclareInterest()
         {
             await SendPeerMessageAsync(PeerMessageID.INTERESTED, []);
-            await RecievePeerMessageAsync(PeerMessageID.UNCHOKE);
+            await ReceivePeerMessageAsync(PeerMessageID.UNCHOKE);
         }
 
         public async Task<byte[]> ReadBitfieldAsync()
         {
-            var bitfield_message = await RecievePeerMessageAsync(PeerMessageID.BITFIELD);
+            var bitfield_message = await ReceivePeerMessageAsync(PeerMessageID.BITFIELD);
             
             return bitfield_message[0..bitfield_message.Length];
         }
@@ -117,7 +117,8 @@ namespace codecrafters_bittorrent
             ConvertToBytes(block_size).CopyTo(payload, 8);
 
             await SendPeerMessageAsync(PeerMessageID.REQUEST, payload);
-            var piece_message = await RecievePeerMessageAsync(PeerMessageID.PIECE);
+            Thread.Sleep(1000);
+            var piece_message = await ReceivePeerMessageAsync(PeerMessageID.PIECE);
             if (piece_message != null) {
                 if (ConvertToInt(piece_message[0..4]) != piece_index)
                 {
@@ -158,10 +159,9 @@ namespace codecrafters_bittorrent
             request[4] = (byte)messageID;
             payload.CopyTo(request, 5);
             await client.SendAsync(request, SocketFlags.None);
-
         }
 
-        private async Task<byte[]> RecievePeerMessageAsync(PeerMessageID expectedMessageID)
+        private async Task<byte[]> ReceivePeerMessageAsync(PeerMessageID expectedMessageID)
         {
             var data_buffer = new byte[5];
             _ = await client.ReceiveAsync(data_buffer, SocketFlags.None);

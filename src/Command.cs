@@ -76,6 +76,8 @@ namespace codecrafters_bittorrent
             var piece_bytes = peer.DownloadPieceAsync(index, piece_size);
             piece_bytes.Wait();
 
+            Console.WriteLine(Convert.ToHexString(file.PieceHashes[0]));
+            Console.WriteLine(Convert.ToHexString(System.Security.Cryptography.SHA1.HashData(piece_bytes.Result)));
             File.WriteAllBytes(temp_filename, piece_bytes.Result);
             Console.WriteLine($"Piece {index} downloaded to {temp_filename}");
         }
