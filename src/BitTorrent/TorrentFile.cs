@@ -70,12 +70,12 @@ namespace codecrafters_bittorrent
 
         
 
-        public List<IPEndPoint> FindPeers()
+        public List<IPEndPoint> FindPeers(string peer_id)
         {
             var get_params = new Dictionary<string, object>
             {
                 { "info_hash", HttpUtility.UrlEncode(GetInfoHash()) },
-                { "peer_id", Guid.NewGuid().ToString().Substring(0,20) },
+                { "peer_id", peer_id },
                 { "port", 6881 },
                 { "uploaded", 0 },
                 { "downloaded", 0 },

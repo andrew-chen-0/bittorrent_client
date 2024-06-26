@@ -56,6 +56,14 @@ else if  (command == "download_piece")
     }
     Command.DownloadPiece(args[2], args[3], Int32.Parse(args[4]));
 }
+else if (command == "download")
+{
+    if (args.Length != 4 && param == "-o")
+    {
+        throw new InvalidOperationException("download usage: download_piece -o {output_file} {input_file}");
+    }
+    Command.DownloadFile(args[2], args[3]);
+}
 else
 {
     throw new InvalidOperationException($"Invalid command: {command}");

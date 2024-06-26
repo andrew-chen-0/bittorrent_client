@@ -1,5 +1,8 @@
-﻿using System.Net;
+﻿using codecrafters_bittorrent.src.BitTorrent;
+using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Text;
 using static System.Security.Cryptography.SHA1;
 
@@ -36,6 +39,8 @@ namespace codecrafters_bittorrent
 
         bool is_initialized = false;
 
+        bool[] has_pieces = [];
+
         public Peer(IPEndPoint address)
         {
             this.address = address;
@@ -44,11 +49,18 @@ namespace codecrafters_bittorrent
 
         public bool IsInitialized => is_initialized;
 
+        public async Task PrepareForDownload(byte[] info_hash, byte[] peer_hash)
+        {
+            Handshake(info_hash, peer_hash);
+            await ReadBitfieldAsync();
+            await DeclareInterest();
+        }
+
         // 1. byte length of Protocol header (one byte)
         // 2. Protocol Header string (17 bytes)
         // 3. Info hash of file (20 bytes)
         // 4. Our peer hash (20 bytes)
-        public async Task<byte[]> HandshakeAsync(byte[] info_hash, byte[] peer_hash)
+        public byte[] Handshake(byte[] info_hash, byte[] peer_hash)
         {
             try
             {
@@ -85,25 +97,57 @@ namespace codecrafters_bittorrent
         public async Task<byte[]> ReadBitfieldAsync()
         {
             var bitfield_message = await ReceivePeerMessageAsync(PeerMessageID.BITFIELD);
-            
-            return bitfield_message[0..bitfield_message.Length];
+            has_pieces = new bool[bitfield_message.Length * 8];
+            for (int i = 0; i< bitfield_message.Length * 8; i++)
+            {
+                var byte_index = i % 8;
+                var index = i / 8;
+                has_pieces[i] = CheckBooleanAtPoint(bitfield_message[index], byte_index);
+            }
+            return bitfield_message;
         }
 
-        public async Task<byte[]> DownloadPieceAsync(int piece_index, long piece_length, byte[] piece_hash)
+        public async Task DownloadFile(ConcurrentQueue<Piece> pieces_queue)
         {
-            await ReadBitfieldAsync();
-            await DeclareInterest();
-            byte[] piece = new byte[piece_length];
-            for (int i = 0; i * BLOCK_SIZE < piece_length; i++)
+            while (pieces_queue.TryDequeue(out var piece))
+            {
+                try
+                {
+                    if (!has_pieces[piece.Index])
+                    {
+                        pieces_queue.Enqueue(piece);
+                        continue;
+                    }
+                    var result = await DownloadPieceAsync(piece);
+                    piece.RecieveData(result);
+                }
+                catch (Exception)
+                {
+                    piece.AttemptedDownload();
+                    pieces_queue.Enqueue(piece);
+                } finally
+                {
+                    if (piece.Attempts >= Piece.MAX_RETRIES)
+                    {
+                        throw new InvalidOperationException("Piece failed Max Retries");
+                    }
+                }
+            }
+        }
+
+        public async Task<byte[]> DownloadPieceAsync(Piece piece_obj)
+        {
+            byte[] piece = new byte[piece_obj.Length];
+            for (int i = 0; i * BLOCK_SIZE < piece_obj.Length; i++)
             {
                 var begin_offset = i * BLOCK_SIZE;
-                var block_size = ((i + 1) * BLOCK_SIZE > piece_length) ? (int)(piece_length % BLOCK_SIZE) : BLOCK_SIZE;
-                var piece_block = await DownloadPieceBlockAsync(piece_index, begin_offset, block_size);
+                var block_size = ((i + 1) * BLOCK_SIZE > piece_obj.Length) ? (int)(piece_obj.Length % BLOCK_SIZE) : BLOCK_SIZE;
+                var piece_block = await DownloadPieceBlockAsync(piece_obj.Index, begin_offset, block_size);
                 piece_block.CopyTo(piece, begin_offset);
             }
-            if (piece_hash == HashData(piece))
+            if (piece_obj.Hash == HashData(piece))
             {
-                throw new InvalidOperationException($"Piece hash did not match {Convert.ToHexString(piece_hash)}");
+                throw new InvalidOperationException($"Piece hash did not match {Convert.ToHexString(piece_obj.Hash)}");
             }
             return piece;
         }
@@ -160,13 +204,13 @@ namespace codecrafters_bittorrent
             length.CopyTo(request, 0);
             request[4] = (byte)messageID;
             payload.CopyTo(request, 5);
-            client.Write(request);
+            await client.WriteAsync(request);
         }
 
         private async Task<byte[]> ReceivePeerMessageAsync(PeerMessageID expectedMessageID)
         {
             var data_buffer = new byte[5];
-            client.ReadExactly(data_buffer);
+            await client.ReadExactlyAsync(data_buffer);
             int length = ConvertToInt(data_buffer[0..4]);
             int messageID = data_buffer[4];
             if (messageID != (int)expectedMessageID)
@@ -179,7 +223,7 @@ namespace codecrafters_bittorrent
             if (length - 1 > 0)
             {
                 buffer = new byte[length - 1];
-                client.ReadExactly(buffer);
+                await client.ReadExactlyAsync(buffer);
             }
 
             return buffer;
@@ -194,6 +238,21 @@ namespace codecrafters_bittorrent
                 Array.Reverse(intBytes);
 
             return intBytes;
+        }
+
+        private bool CheckBooleanAtPoint(byte bit_array, int index)
+        {
+            if (index < 0 && index > 7)
+            {
+                throw new IndexOutOfRangeException("Index was out of range of a byte array");
+            }
+            int max_int = 2;
+            max_int = max_int << 6;
+            for(int i = 1; i <= index; i++)
+            {
+                max_int = max_int >> 1;
+            }
+            return (bit_array & max_int) == max_int;
         }
 
         private int ConvertToInt(byte[] bytes)

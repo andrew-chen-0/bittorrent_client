@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using codecrafters_bittorrent.src.BitTorrent;
+using System.Text;
 using System.Text.Json;
 
 
@@ -31,7 +32,7 @@ namespace codecrafters_bittorrent
         public static void DecodeFileAndFindPeers(string filename)
         {
             var file = new TorrentFile(filename);
-            var addresses = file.FindPeers();
+            var addresses = file.FindPeers(Guid.NewGuid().ToString().Substring(0, 20));
             addresses.ForEach(address => Console.WriteLine(address.ToString()));
         }
 
@@ -41,9 +42,8 @@ namespace codecrafters_bittorrent
             var peer_id = Encoding.UTF8.GetBytes("00112233445566778899");
             var endpoint = Util.CreateIPEndPoint(address);
             using var peer = new Peer(endpoint);
-            var result = peer.HandshakeAsync(file.InfoHash, peer_id);
-            result.Wait();
-            Console.WriteLine("Peer ID: " + Convert.ToHexString(result.Result[48..68]).ToLower());
+            var result = peer.Handshake(file.InfoHash, peer_id);
+            Console.WriteLine("Peer ID: " + Convert.ToHexString(result[48..68]).ToLower());
         }
 
         public static void DownloadPiece(string temp_filename, string torrent_filename, int index)
@@ -53,11 +53,10 @@ namespace codecrafters_bittorrent
             {
                 throw new InvalidOperationException($"Index was out of range for length: {file.PieceHashes.Count}");
             }
-            var addresses = file.FindPeers();
+            var addresses = file.FindPeers(Guid.NewGuid().ToString().Substring(0, 20));
             var peer_id = Encoding.UTF8.GetBytes("00112233445566778899");
             using var peer = new Peer(addresses[0]);
-            var result = peer.HandshakeAsync(file.InfoHash, peer_id);
-            result.Wait();
+            _ = peer.PrepareForDownload(file.InfoHash, peer_id);
 
             var end_index = (int)(file.Length / file.PieceLength);
             if (index < 0 || index > end_index)
@@ -66,10 +65,18 @@ namespace codecrafters_bittorrent
             }
 
             var piece_size = index == end_index ? file.Length % file.PieceLength : file.PieceLength;
-            var piece_bytes = peer.DownloadPieceAsync(index, piece_size, file.PieceHashes[index]);
+            var piece_bytes = peer.DownloadPieceAsync(new Piece(index, piece_size, file.PieceHashes[index]));
             piece_bytes.Wait();
             File.WriteAllBytes(temp_filename, piece_bytes.Result);
             Console.WriteLine($"Piece {index} downloaded to {temp_filename}");
+        }
+
+        public static void DownloadFile(string temp_filename, string torrent_filename)
+        {
+            var file = new TorrentFile(torrent_filename);
+            var torrent_downloader = new TorrentDownload(file);
+            torrent_downloader.DownloadFile(temp_filename);
+            Console.WriteLine($"Downloaded {torrent_filename} to {temp_filename}.");
         }
     }
 }
