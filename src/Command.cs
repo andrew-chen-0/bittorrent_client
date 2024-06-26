@@ -75,8 +75,10 @@ namespace codecrafters_bittorrent
         {
             var file = new TorrentFile(torrent_filename);
             var torrent_downloader = new TorrentDownload(file);
+            DateTime start = DateTime.Now;
             torrent_downloader.DownloadFile(temp_filename);
-            Console.WriteLine($"Downloaded {torrent_filename} to {temp_filename}.");
+            TimeSpan timeItTook = DateTime.Now - start;
+            Console.WriteLine($"Downloaded {torrent_filename} to {temp_filename} in {timeItTook.TotalSeconds} seconds.");
         }
     }
 }
