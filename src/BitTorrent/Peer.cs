@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using static System.Security.Cryptography.SHA1;
 
 namespace codecrafters_bittorrent
 {
@@ -35,14 +31,15 @@ namespace codecrafters_bittorrent
         public readonly static int BLOCK_SIZE = 16 * 1024;
 
         IPEndPoint address;
-        Socket client;
+        TcpClient tcpClient;
+        NetworkStream client;
 
         bool is_initialized = false;
 
         public Peer(IPEndPoint address)
         {
             this.address = address;
-            client = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            tcpClient = new TcpClient();
         }
 
         public bool IsInitialized => is_initialized;
@@ -62,11 +59,12 @@ namespace codecrafters_bittorrent
                 info_hash.CopyTo(request, 28);
                 peer_hash.CopyTo(request, 48);
 
-                await client.ConnectAsync(address);
-                await client.SendAsync(request, SocketFlags.None);
+                tcpClient.Connect(address);
+                client = tcpClient.GetStream();
+                client.Write(request);
 
                 var buffer = new byte[68];
-                _ = await client.ReceiveAsync(buffer, SocketFlags.None);
+                client.Read(buffer);
                 is_initialized = true;
 
                 return buffer;
@@ -91,7 +89,7 @@ namespace codecrafters_bittorrent
             return bitfield_message[0..bitfield_message.Length];
         }
 
-        public async Task<byte[]> DownloadPieceAsync(int piece_index, long piece_length)
+        public async Task<byte[]> DownloadPieceAsync(int piece_index, long piece_length, byte[] piece_hash)
         {
             await ReadBitfieldAsync();
             await DeclareInterest();
@@ -103,12 +101,15 @@ namespace codecrafters_bittorrent
                 var piece_block = await DownloadPieceBlockAsync(piece_index, begin_offset, block_size);
                 piece_block.CopyTo(piece, begin_offset);
             }
+            if (piece_hash == HashData(piece))
+            {
+                throw new InvalidOperationException($"Piece hash did not match {Convert.ToHexString(piece_hash)}");
+            }
             return piece;
         }
 
         private async Task<byte[]> DownloadPieceBlockAsync(int piece_index, int begin_offset, int block_size)
         {
-            
             byte[] payload = new byte[4 * 3]; // int index, begin, payload
 
             // Copy to payload
@@ -117,15 +118,16 @@ namespace codecrafters_bittorrent
             ConvertToBytes(block_size).CopyTo(payload, 8);
 
             await SendPeerMessageAsync(PeerMessageID.REQUEST, payload);
-            Thread.Sleep(1000);
             var piece_message = await ReceivePeerMessageAsync(PeerMessageID.PIECE);
             if (piece_message != null) {
-                if (ConvertToInt(piece_message[0..4]) != piece_index)
+                var index = ConvertToInt(piece_message[0..4]);
+                if (index != piece_index)
                 {
                     throw new InvalidOperationException($"Responding piece index was not same as requested piece index");
                 }
 
-                if (ConvertToInt(piece_message[4..8]) != begin_offset)
+                var offset = ConvertToInt(piece_message[4..8]);
+                if (offset != begin_offset)
                 {
                     throw new InvalidOperationException($"Responding offset was not same as requested offset");
                 }
@@ -134,7 +136,7 @@ namespace codecrafters_bittorrent
                 {
                     throw new InvalidOperationException($"Message Length was expected to be {block_size} bytes but got {piece_message.Length - 8} bytes");
                 }
-                
+
                 return piece_message[8..piece_message.Length];
             }
             throw new InvalidOperationException("Failed to receive piece message");
@@ -158,13 +160,13 @@ namespace codecrafters_bittorrent
             length.CopyTo(request, 0);
             request[4] = (byte)messageID;
             payload.CopyTo(request, 5);
-            await client.SendAsync(request, SocketFlags.None);
+            client.Write(request);
         }
 
         private async Task<byte[]> ReceivePeerMessageAsync(PeerMessageID expectedMessageID)
         {
             var data_buffer = new byte[5];
-            _ = await client.ReceiveAsync(data_buffer, SocketFlags.None);
+            client.ReadExactly(data_buffer);
             int length = ConvertToInt(data_buffer[0..4]);
             int messageID = data_buffer[4];
             if (messageID != (int)expectedMessageID)
@@ -177,7 +179,7 @@ namespace codecrafters_bittorrent
             if (length - 1 > 0)
             {
                 buffer = new byte[length - 1];
-                _ = await client.ReceiveAsync(buffer, SocketFlags.None);
+                client.ReadExactly(buffer);
             }
 
             return buffer;
@@ -207,6 +209,7 @@ namespace codecrafters_bittorrent
 
         public void Dispose()
         {
+            tcpClient.Dispose();
             client.Dispose();
         }
     }

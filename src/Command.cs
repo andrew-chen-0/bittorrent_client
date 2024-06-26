@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Security.Cryptography;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
-using System.Web;
 
 
 namespace codecrafters_bittorrent
@@ -73,11 +66,8 @@ namespace codecrafters_bittorrent
             }
 
             var piece_size = index == end_index ? file.Length % file.PieceLength : file.PieceLength;
-            var piece_bytes = peer.DownloadPieceAsync(index, piece_size);
+            var piece_bytes = peer.DownloadPieceAsync(index, piece_size, file.PieceHashes[index]);
             piece_bytes.Wait();
-
-            Console.WriteLine(Convert.ToHexString(file.PieceHashes[0]));
-            Console.WriteLine(Convert.ToHexString(System.Security.Cryptography.SHA1.HashData(piece_bytes.Result)));
             File.WriteAllBytes(temp_filename, piece_bytes.Result);
             Console.WriteLine($"Piece {index} downloaded to {temp_filename}");
         }
